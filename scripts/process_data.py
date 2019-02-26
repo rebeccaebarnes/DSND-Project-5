@@ -1,21 +1,75 @@
-import sys
+import argparse
+
+import pandas as pd
+import sqlite3
+
+# Create argparser
+parser = argparse.ArgumentParser(description='Categorize disaster messages')
+parser.add_argument("messages_filepath", help="File path for messages csv")
+parser.add_argument("categories_filepath", help="File path for categories csv")
+parser.add_argument("database_filepath", help="File path for database")
+args = parser.parse_args()
 
 
 def load_data(messages_filepath, categories_filepath):
-    pass
+    messages_df = pd.read_csv(messages_filepath)
+    categories_df = pd.read_csv(categories_filepath)
+
+    return messages_df, categories_df
 
 
-def clean_data(df):
-    pass
+def clean_data(messages_df, categories_df):
+    # Merge datasets
+    df = pd.merge(messages_df, categories_df, on='id')
+
+    # Drop duplicates
+    df.drop_duplicates(inplace=True)
+
+    # Create categories columns
+    new_cat_df = df.categories.str.split(';', expand=True)
+
+    col_names = df.iloc[0].str[:-2]
+    new_cat_df.columns = col_names
+
+    for col in col_names:
+        new_cat_df[col] = new_cat_df[col].str[-1].astype(int)
+
+    df = pd.concat([df.drop('categories', axis=1), new_cat_df], axis=1)
+
+    # Clean 'related' values
+    df.loc[(df.related == 2), 'related'] = 1
+
+    return df
 
 
-def save_data(df, database_filename):
-    pass  
+def save_data(df, database_filepath):
+    conn = sqlite3.connect(database_filepath)
+    df.to_sql('messages', con=conn, if_exists='replace', index=False)
+    conn.commit()
+    conn.close()
 
 
 def main():
-    print(sys.argv)
-    print(len(sys.argv))
+    # Load data
+    print('Loading data...\n    MESSAGES: {}\n    CATEGORIES: {}'
+              .format(args.messages_filepath, args.categories_filepath))
+    messages_df, categories_df = load_data(args.messages_filepath, 
+                                           args.categories_filepath)    
+
+    # Check if data already in db
+    conn = sqlite3.connect(args.database_filepath)
+    row_count = pd.read_sql('SELECT COUNT(*) FROM messages', conn).iloc[0][0]
+    if categories_df.drop_duplicates().shape[0] == row_count:
+        print('Database is up to date')
+        conn.close()
+    else:
+        print('Cleaning data...')
+        df = clean_data(messages_df, categories_df)
+
+        print('Saving data...')
+        save_data(df, args.database_filepath)
+
+    
 
 if __name__ == '__main__':
     main()
