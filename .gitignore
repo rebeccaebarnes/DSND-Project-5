@@ -1,3 +1,4 @@
 .ipynb_checkpoints
+*\__pychache__
 disaster_env
 data/model.pkl
