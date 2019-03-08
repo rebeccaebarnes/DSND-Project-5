@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import pickle
 from string import punctuation
 
@@ -159,7 +160,11 @@ def evaluate_model(model, X_test, Y_test, col_names):
 
 
 def save_model(model, model_filepath):
-    with open(model_filepath, 'wb') as file:
+    file_name = 'model.pkl'
+    full_name = os.path.join(model_filepath, file_name)
+    if not os.path.exists(model_filepath):
+        os.makedirs(model_filepath)
+    with open(full_name, 'wb') as file:
         pickle.dump(model, file)
 
 
