@@ -13,14 +13,99 @@ from nltk.stem.porter import PorterStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
 from flask import Flask, render_template, request, jsonify
 from plotly.graph_objs import Bar
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.externals import joblib
 from sqlalchemy import create_engine
 
-from scripts.train_classifier import WordCount, CharacterCount, NounCount, \
-    VerbCount, tokenize
-
 # Create app
 app = Flask(__name__)
+
+# Create classes
+class WordCount(BaseEstimator, TransformerMixin):
+    def word_count(self, text):
+        table = text.maketrans(dict.fromkeys(punctuation))
+        words = word_tokenize(text.lower().strip().translate(table))
+        return len(words)
+    
+    def fit(self, x, y=None):
+        return self
+    
+    def transform(self, x):
+        count = pd.Series(x).apply(self.word_count)
+        return pd.DataFrame(count)
+
+
+class CharacterCount(BaseEstimator, TransformerMixin):
+    def character_count(self, text):
+        return len(text)
+    
+    def fit(self, x, y=None):
+        return self
+    
+    def transform(self, x):
+        count = pd.Series(x).apply(self.character_count)
+        return pd.DataFrame(count)
+
+
+class NounCount(BaseEstimator, TransformerMixin):
+    def noun_count(self, text):
+        count = 0
+        sentence_list = sent_tokenize(text)
+        for sentence in sentence_list:
+            pos_tags = nltk.pos_tag(tokenize(sentence))
+            for _, tag in pos_tags:
+                if tag in ['PRP', 'NN']:
+                    count += 1
+        
+        return count
+    
+    def fit(self, x, y=None):
+        return self
+    
+    def transform(self, x):
+        count = pd.Series(x).apply(self.noun_count)
+        return pd.DataFrame(count)
+
+
+class VerbCount(BaseEstimator, TransformerMixin):
+    def verb_count(self, text):
+        count = 0
+        sentence_list = sent_tokenize(text)
+        for sentence in sentence_list:
+            pos_tags = nltk.pos_tag(tokenize(sentence))
+            for _, tag in pos_tags:
+                if tag in ['VB', 'VBP']:
+                    count += 1
+        
+        return count
+    
+    def fit(self, x, y=None):
+        return self
+    
+    def transform(self, x):
+        count = pd.Series(x).apply(self.verb_count)
+        return pd.DataFrame(count)
+
+# Create functions
+def load_data(database_filepath):
+    engine_location = 'sqlite:///' + database_filepath
+    engine = create_engine(engine_location)
+    df = pd.read_sql_table('messages', engine)
+    X = df['message']
+    Y = df.loc[:, 'related':'direct_report']
+    category_names = Y.columns
+    return X, Y, category_names
+
+
+def tokenize(text):
+    table = text.maketrans(dict.fromkeys(punctuation))
+    words = word_tokenize(text.lower().strip().translate(table))
+    words = [word for word in words if word not in stopwords.words('english')]
+    lemmed = [WordNetLemmatizer().lemmatize(word) for word in words]
+    lemmed = [WordNetLemmatizer().lemmatize(word, pos='v') for word in lemmed]
+    stemmed = [PorterStemmer().stem(word) for word in lemmed]
+    
+    return stemmed
 
 # load data
 engine = create_engine('sqlite:///./data/disaster_messages.db')
