@@ -3,14 +3,6 @@ import argparse
 import pandas as pd
 import sqlite3
 
-# Create argparser
-parser = argparse.ArgumentParser(description='Categorize disaster messages')
-parser.add_argument("messages_filepath", help="File path for messages csv")
-parser.add_argument("categories_filepath", help="File path for categories csv")
-parser.add_argument("database_filepath", help="File path for database")
-args = parser.parse_args()
-
-
 def load_data(messages_filepath, categories_filepath):
     messages_df = pd.read_csv(messages_filepath)
     categories_df = pd.read_csv(categories_filepath)
@@ -49,15 +41,15 @@ def save_data(df, database_filepath):
     conn.close()
 
 
-def main():
+def main(messages_filepath, categories_filepath, database_filepath):
     # Load data
     print('Loading data...\n    MESSAGES: {}\n    CATEGORIES: {}'
-              .format(args.messages_filepath, args.categories_filepath))
-    messages_df, categories_df = load_data(args.messages_filepath, 
-                                           args.categories_filepath)    
+              .format(messages_filepath, categories_filepath))
+    messages_df, categories_df = load_data(messages_filepath, 
+                                           categories_filepath)    
 
     # Check if data already in db
-    conn = sqlite3.connect(args.database_filepath)
+    conn = sqlite3.connect(database_filepath)
     row_count = pd.read_sql('SELECT COUNT(*) FROM messages', conn).iloc[0][0]
     if categories_df.drop_duplicates().shape[0] == row_count:
         print('Database is up to date')
@@ -67,9 +59,18 @@ def main():
         df = clean_data(messages_df, categories_df)
 
         print('Saving data...')
-        save_data(df, args.database_filepath)
+        save_data(df, database_filepath)
 
     
 
 if __name__ == '__main__':
-    main()
+    # Create argparser
+    parser = argparse.ArgumentParser(description='Categorize disaster messages')
+    parser.add_argument("messages_filepath", help="File path for messages csv")
+    parser.add_argument("categories_filepath", help="File path for categories csv")
+    parser.add_argument("database_filepath", help="File path for database")
+    args = parser.parse_args()
+
+    main(messages_filepath=args.messages_filepath, 
+         categories_filepath=args.categories_filepath, 
+         database_filepath=args.database_filepath)

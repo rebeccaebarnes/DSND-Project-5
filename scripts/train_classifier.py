@@ -24,21 +24,6 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import classification_report, f1_score, make_scorer
 from sklearn.base import BaseEstimator, TransformerMixin
 
-# Create argparser
-parser = argparse.ArgumentParser(description='Categorize train ml/nlp pipeline')
-parser.add_argument("database_filepath", help="File path for database")
-parser.add_argument("model_filepath", help="File path for saving model")
-parser.add_argument('-d', '--params_dict', 
-                    help='Dictionary of model parameters. Dictionary should be\
-                          passed in string form with values in a list, e.g. \
-                          "{key: [value(s)]}". To see available params, use \
-                          "train_classifer.py database/filepath model/filepath\
-                          -p"', 
-                    type=json.loads)
-parser.add_argument('-p', '--available_params', action='store_true',
-                    help='Details of model parameter keys')
-args = parser.parse_args()
-
 # Set up classes
 class WordCount(BaseEstimator, TransformerMixin):
     def word_count(self, text):
@@ -107,7 +92,8 @@ class VerbCount(BaseEstimator, TransformerMixin):
 
 # Create functions
 def load_data(database_filepath):
-    engine = create_engine(database_filepath)
+    engine_location = 'sqlite:///' + database_filepath
+    engine = create_engine(engine_location)
     df = pd.read_sql_table('messages', engine)
     X = df['message']
     Y = df.loc[:, 'related':'direct_report']
@@ -128,16 +114,22 @@ def tokenize(text):
 
 def build_model(X_train, Y_train, params=None):
     if not params:
-        params = {
-            'clf__estimator__max_depth': [500],
-            'clf__estimator__min_samples_split': [25],
-            'clf__estimator__n_estimators': [300],
-            'features__text__max_df': [0.5],
-            'features__text__max_features': [5000],
-            'features__text__ngram_range': [(1, 2)],
-            'features__text__use_idf': [False]
-        }
-    
+        model = Pipeline([
+            ("features", FeatureUnion([
+                ("text", TfidfVectorizer(tokenizer=tokenize, max_df=0.5, 
+                                 max_features=5000, ngram_range=(1, 2),
+                                 use_idf=False)),
+                ("word_count", WordCount()),
+                ("character_count", CharacterCount()),
+                ("noun_count", NounCount()),
+                ("verb_count", VerbCount())
+            ])),
+            ("clf", MultiOutputClassifier(RandomForestClassifier(
+                min_samples_split=25, random_state=42, 
+                max_depth=500, n_estimators=300)))
+            ])
+
+    else:
         pipeline = Pipeline([
             ("features", FeatureUnion([
                 ("text", TfidfVectorizer(tokenizer=tokenize)),
@@ -146,16 +138,16 @@ def build_model(X_train, Y_train, params=None):
                 ("noun_count", NounCount()),
                 ("verb_count", VerbCount())
             ])),
-        ("clf", MultiOutputClassifier(RandomForestClassifier(random_state=42, 
-                                                             verbose=1)))
-        ])
+            ("clf", MultiOutputClassifier(RandomForestClassifier(random_state=42)))
+            ])
 
-    scorer = make_scorer(f1_score, average='micro')
+        scorer = make_scorer(f1_score, average='micro')
 
-    cv = GridSearchCV(pipeline, params, cv=5, n_jobs=3, scoring=scorer)
+        model = GridSearchCV(pipeline, params, cv=5, n_jobs=3, scoring=scorer)
+
     print('Training model...')
-    cv.fit(X_train, Y_train)
-    return cv
+    model.fit(X_train, Y_train)
+    return model
 
 
 def evaluate_model(model, X_test, Y_test, col_names):
@@ -171,8 +163,7 @@ def save_model(model, model_filepath):
         pickle.dump(model, file)
 
 
-def main(database_filepath=args.database_filepath, 
-         model_filepath=args.model_filepath, params=args.params_dict):
+def main(database_filepath, model_filepath, params):
     print('Loading data...\n    DATABASE: {}'.format(database_filepath))
     X, Y, category_names = load_data(database_filepath)
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
@@ -190,6 +181,21 @@ def main(database_filepath=args.database_filepath,
 
 
 if __name__ == '__main__':
+    # Create argparser
+    parser = argparse.ArgumentParser(description='Categorize train ml/nlp pipeline')
+    parser.add_argument("database_filepath", help="File path for database")
+    parser.add_argument("model_filepath", help="File path for saving model")
+    parser.add_argument('-d', '--params_dict', 
+                        help='Dictionary of model parameters. Dictionary should be\
+                          passed in string form with values in a list, e.g. \
+                          "{key: [value(s)]}". To see available params, use \
+                          "train_classifer.py database/filepath model/filepath\
+                          -p"', 
+                            type=json.loads)
+    parser.add_argument('-p', '--available_params', action='store_true',
+                        help='Details of model parameter keys')
+    args = parser.parse_args()
+
     if args.available_params:
         pipeline = Pipeline([
             ("features", FeatureUnion([
@@ -199,11 +205,11 @@ if __name__ == '__main__':
                 ("noun_count", NounCount()),
                 ("verb_count", VerbCount())
             ])),
-        ("clf", MultiOutputClassifier(RandomForestClassifier(random_state=42, 
-                                                             verbose=1)))
+        ("clf", MultiOutputClassifier(RandomForestClassifier(random_state=42)))
         ])
 
         print(pipeline.get_params())
     
     else:
-        main()
+        main(database_filepath=args.database_filepath, 
+             model_filepath=args.model_filepath, params=args.params_dict)
