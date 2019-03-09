@@ -208,11 +208,13 @@ def save_model(model, model_filepath):
     '''
     Pickle model in specified location.
     '''
-    file_name = 'model.pkl'
-    full_name = os.path.join(model_filepath, file_name)
-    if not os.path.exists(model_filepath):
-        os.makedirs(model_filepath)
-    with open(full_name, 'wb') as file:
+    # Assume maximum depth of one directory for location
+    if model_filepath.find('/'):
+        folder_name = model_filepath.split('/')[0]
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+    
+    with open(model_filepath, 'wb') as file:
         pickle.dump(model, file)
 
 
