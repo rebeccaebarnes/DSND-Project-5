@@ -1,4 +1,3 @@
-import argparse
 import json
 import os
 import pickle
@@ -241,6 +240,7 @@ def main(database_filepath, model_filepath, params):
 
 if __name__ == '__main__':
     # Create argparser
+    import argparse
     parser = argparse.ArgumentParser(description='Categorize train ml/nlp pipeline')
     parser.add_argument("database_filepath", help="File path for database")
     parser.add_argument("model_filepath", help="File path for saving model")

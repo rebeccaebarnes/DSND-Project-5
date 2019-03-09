@@ -1,5 +1,3 @@
-import argparse
-
 import pandas as pd
 import sqlite3
 
@@ -65,6 +63,7 @@ def main(messages_filepath, categories_filepath, database_filepath):
 
 if __name__ == '__main__':
     # Create argparser
+    import argparse
     parser = argparse.ArgumentParser(description='Categorize disaster messages')
     parser.add_argument("messages_filepath", help="File path for messages csv")
     parser.add_argument("categories_filepath", help="File path for categories csv")
