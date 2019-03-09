@@ -27,6 +27,9 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 # Set up classes
 class WordCount(BaseEstimator, TransformerMixin):
+    '''
+    Custom scikit-learn transformer to count the number of words in text.
+    '''
     def word_count(self, text):
         table = text.maketrans(dict.fromkeys(punctuation))
         words = word_tokenize(text.lower().strip().translate(table))
@@ -41,6 +44,10 @@ class WordCount(BaseEstimator, TransformerMixin):
 
 
 class CharacterCount(BaseEstimator, TransformerMixin):
+    '''
+    Custom scikit-learn transformer to count the number of characters in text, 
+    including spaces and punctuation.
+    '''
     def character_count(self, text):
         return len(text)
     
@@ -53,6 +60,11 @@ class CharacterCount(BaseEstimator, TransformerMixin):
 
 
 class NounCount(BaseEstimator, TransformerMixin):
+    '''
+    Custom scikit-learn transformer to count the number of nouns in text after
+    tokenization including removal of stop words, lemmatization of nouns and 
+    verbs, and stemming, using nltk's WordNetLemmatizer and PorterStemmer.
+    '''
     def noun_count(self, text):
         count = 0
         sentence_list = sent_tokenize(text)
@@ -73,6 +85,10 @@ class NounCount(BaseEstimator, TransformerMixin):
 
 
 class VerbCount(BaseEstimator, TransformerMixin):
+    '''
+    Custom scikit-learn transformer to count the number of nouns in text after
+    tokenization using a custom "tokenize" function.
+    '''
     def verb_count(self, text):
         count = 0
         sentence_list = sent_tokenize(text)
@@ -93,6 +109,10 @@ class VerbCount(BaseEstimator, TransformerMixin):
 
 # Create functions
 def load_data(database_filepath):
+    '''
+    Load 'messages' table from a database and extract X and Y values and 
+    category names.
+    '''
     engine_location = 'sqlite:///' + database_filepath
     engine = create_engine(engine_location)
     df = pd.read_sql_table('messages', engine)
@@ -103,6 +123,11 @@ def load_data(database_filepath):
 
 
 def tokenize(text):
+    '''
+    Tokenizes text after standardizing text, removing punctuation and stop words
+    by lemmatizing nouns and verbs, and stemming, using nltk's WordNetLemmatizer
+    and PorterStemmer.
+    '''
     table = text.maketrans(dict.fromkeys(punctuation))
     words = word_tokenize(text.lower().strip().translate(table))
     words = [word for word in words if word not in stopwords.words('english')]
@@ -114,6 +139,22 @@ def tokenize(text):
 
 
 def build_model(X_train, Y_train, params=None):
+    '''
+    Create a multi-output Random Forest classifier machine learning pipeline for
+    natural language processing with tdidf, word_count, character_count, 
+    noun_count, and verb_count features. If params are provided, grid search is 
+    conducted for optimization. Default paramas are max_df=0.5, 
+    max_features=5000, ngram_range=(1, 2), use_idf=False for tfidf feature and 
+    min_samples_split=25, max_depth=500, n_estimators=300 for the classifier.
+
+    Args:
+        X_train: Array-like. Text to be analayzed. 
+        Y_train: Array-like. Classification labels.
+        params: Optionall. Dictionary. Range of parameters to search with grid 
+                search.
+    Returns:
+        Fitted Random Forest classifer.
+    '''
     if not params:
         model = Pipeline([
             ("features", FeatureUnion([
@@ -152,6 +193,10 @@ def build_model(X_train, Y_train, params=None):
 
 
 def evaluate_model(model, X_test, Y_test, col_names):
+    '''
+    Print the precision, recall and f1-scores for a multi-output 
+    classification.
+    '''
     y_preds = model.predict(X_test)
     for label, pred, col in zip(Y_test.values.transpose(), y_preds.transpose(), 
                                 col_names):
@@ -160,6 +205,9 @@ def evaluate_model(model, X_test, Y_test, col_names):
 
 
 def save_model(model, model_filepath):
+    '''
+    Pickle model in specified location.
+    '''
     file_name = 'model.pkl'
     full_name = os.path.join(model_filepath, file_name)
     if not os.path.exists(model_filepath):
@@ -169,6 +217,10 @@ def save_model(model, model_filepath):
 
 
 def main(database_filepath, model_filepath, params):
+    '''
+    Extract datafrom database, train a multi-output Random Forrest classifier, 
+    print evaluation statistics, and save the model.
+    '''
     print('Loading data...\n    DATABASE: {}'.format(database_filepath))
     X, Y, category_names = load_data(database_filepath)
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
