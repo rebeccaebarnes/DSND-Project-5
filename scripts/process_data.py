@@ -2,6 +2,9 @@ import pandas as pd
 import sqlite3
 
 def load_data(messages_filepath, categories_filepath):
+    '''
+    Create dataframes for messages and categories data.
+    '''
     messages_df = pd.read_csv(messages_filepath)
     categories_df = pd.read_csv(categories_filepath)
 
@@ -9,6 +12,14 @@ def load_data(messages_filepath, categories_filepath):
 
 
 def clean_data(messages_df, categories_df):
+    '''
+    Create a clean, combined dataframe of messages and category dummy variables.
+
+    Args:
+        messages_df: DataFrame. Contains 'id' column for joining.
+        categories_df: DataFrame. Contains 'id' column for joining and 
+        'categories' column with strings of categories separated by ;.
+    '''
     # Merge datasets
     df = pd.merge(messages_df, categories_df, on='id')
 
@@ -33,6 +44,9 @@ def clean_data(messages_df, categories_df):
 
 
 def save_data(df, database_filepath):
+    '''
+    Save dataframe to database in 'messages' table. Replace any existing data.
+    '''
     conn = sqlite3.connect(database_filepath)
     df.to_sql('messages', con=conn, if_exists='replace', index=False)
     conn.commit()
@@ -40,6 +54,10 @@ def save_data(df, database_filepath):
 
 
 def main(messages_filepath, categories_filepath, database_filepath):
+    '''
+    Extract messages and categories data from csv files, cleans the data and 
+    saves merged data into database. Checks if data already saved.
+    '''
     # Load data
     print('Loading data...\n    MESSAGES: {}\n    CATEGORIES: {}'
               .format(messages_filepath, categories_filepath))
