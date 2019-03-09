@@ -64,18 +64,29 @@ def main(messages_filepath, categories_filepath, database_filepath):
     messages_df, categories_df = load_data(messages_filepath, 
                                            categories_filepath)    
 
-    # Check if data already in db
+    
     conn = sqlite3.connect(database_filepath)
-    row_count = pd.read_sql('SELECT COUNT(*) FROM messages', conn).iloc[0][0]
-    if categories_df.drop_duplicates().shape[0] == row_count:
-        print('Database is up to date')
-        conn.close()
-    else:
+    # Check if data already in db
+    try:
+        row_count = pd.read_sql('SELECT COUNT(*) FROM messages', conn).iloc[0][0]
+        if categories_df.drop_duplicates().shape[0] == row_count:
+            print('Database is up to date')
+            conn.close()
+        else:
+            print('Cleaning data...')
+            df = clean_data(messages_df, categories_df)
+
+            print('Saving data...')
+            save_data(df, database_filepath)
+            conn.close()
+
+    except sqlite3.OperationalError:
         print('Cleaning data...')
         df = clean_data(messages_df, categories_df)
 
         print('Saving data...')
         save_data(df, database_filepath)
+        conn.close()
 
     
 
