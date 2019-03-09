@@ -12,7 +12,7 @@ from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
 from flask import Flask, render_template, request, jsonify
-from plotly.graph_objs import Bar
+from plotly.graph_objs import Bar, Heatmap
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.externals import joblib
 from sqlalchemy import create_engine
@@ -87,15 +87,6 @@ class VerbCount(BaseEstimator, TransformerMixin):
         return pd.DataFrame(count)
 
 # Create functions
-def load_data(database_filepath):
-    engine_location = 'sqlite:///' + database_filepath
-    engine = create_engine(engine_location)
-    df = pd.read_sql_table('messages', engine)
-    X = df['message']
-    Y = df.loc[:, 'related':'direct_report']
-    category_names = Y.columns
-    return X, Y, category_names
-
 
 def tokenize(text):
     table = text.maketrans(dict.fromkeys(punctuation))
@@ -121,29 +112,84 @@ model = joblib.load("./models/model.pkl")
 def index():
     
     # extract data needed for visuals
-    # TODO: Below is an example - modify to extract data for your own visuals
-    genre_counts = df.groupby('genre').count()['message']
-    genre_names = list(genre_counts.index)
+    data = df.iloc[:, 4:].drop('child_alone', axis=1)
+    related_counts = data.related.value_counts().tolist()
+    related_msg_counts = data[data.related == 1].sum().tolist()[1:]
     
+    corr_list = []
+    correl = data.corr().values
+    for row in correl:
+        corr_list.append(list(row))
+    
+    col_names = [col.replace('_', ' ').title() for col in data.columns]
+
     # create visuals
-    # TODO: Below is an example - modify to create your own visuals
     graphs = [
         {
             'data': [
                 Bar(
-                    x=genre_names,
-                    y=genre_counts
+                    x=['Related', 'Not Related'],
+                    y=related_counts
                 )
             ],
 
             'layout': {
-                'title': 'Distribution of Message Genres',
+                'title': 'How Many Messages were Related to Disasters?',
                 'yaxis': {
                     'title': "Count"
                 },
                 'xaxis': {
-                    'title': "Genre"
-                }
+                    'title': "Message Type"
+                },
+                'margin': dict(
+                    l = 350,
+                    r = 350, 
+                )
+            }
+        },
+        {
+            'data': [
+                Bar(
+                    x=col_names[1:],
+                    y=related_msg_counts
+                )
+            ],
+
+            'layout': {
+                'title': 'Types of Disaster Messages were Received?',
+                'yaxis': {
+                    'title': "Count"
+                },
+                'xaxis': {
+                    'title': "Message Type"
+                },
+                'height': 620,
+                'margin': dict(
+                    b = 230,
+                    pad = 4
+                    ),
+            }
+        },
+        {
+            'data': [
+                Heatmap(
+                    z=corr_list, 
+                    x=col_names,
+                    y=col_names,
+                    colorscale='Viridis',
+                )
+            ],
+
+            'layout': {
+                'title': 'What Types of Messages Occur Together?',
+                'height': 750,
+                'margin': dict(
+                    l = 150,
+                    r = 30, 
+                    b = 160,
+                    t = 30,
+                    pad = 4
+                    ),
             }
         }
     ]

@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Disasters</title>
+    <title>Disaster Messsages Analysis</title>
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
@@ -23,7 +23,7 @@
         <div id="navbar" class="collapse navbar-collapse">
             <ul class="nav navbar-nav">
                 <li><a href="https://www.udacity.com/">Made with Udacity</a></li>
-                <li><a href="https://github.com/">Contact</a></li>
+                <li><a href="https://github.com/rebeccaebarnes">Contact</a></li>
             </ul>
         </div>
     </div>
@@ -58,7 +58,15 @@
             <h1 class="text-center">Overview of Training Dataset</h1>
         </div>
     {% endblock %}
-
+        <p style="font-size:1.1vw;">
+            When responding to disasters, aid organizations are often innundated with messages.
+            Being able to determine which messages need responses and can be incredibly time consuming. 
+            Utilizing natural language processing and machine learning to classify message types could be used to speed up the time between receiving the message and providing appropriate support.
+        </p>
+        <p style="font-size:1.1vw;">
+            This dataset, provided by <a href="https://www.figure-eight.com/" target="blank">Figure8</a> was used to train an algorithm to classify disaster messages. 
+            Checkout some of the descriptive stats below, and see how the classification works by entering a message above!
+        </p>
     {% for id in ids %}
         <div id="{{id}}"></div>
     {% endfor %}
